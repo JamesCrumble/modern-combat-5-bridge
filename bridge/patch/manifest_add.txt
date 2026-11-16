@@ -1,0 +1,16 @@
+# Added to the game's AndroidManifest.xml by the patcher (bridge/src/.../patch/Axml.java; combined APK B, documentation/architecture.md)
+perm android.permission.INTERNET
+perm android.permission.FOREGROUND_SERVICE
+perm android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+perm android.permission.POST_NOTIFICATIONS
+perm android.permission.WAKE_LOCK
+perm android.permission.ACCESS_LOCAL_NETWORK
+perm android.permission.ACCESS_WIFI_STATE
+perm android.permission.READ_EXTERNAL_STORAGE max=29
+perm android.permission.WRITE_EXTERNAL_STORAGE max=28
+perm android.permission.MANAGE_EXTERNAL_STORAGE
+app-bool cleartext 1
+unlauncher com.gameloft.android.ANMP.GloftM5HM.MainActivity
+service com.jamescrumble.mc5bridge.ServerService exported=0 fgs=0x40000000
+property android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE local game server for the game inside this app
+activity com.jamescrumble.mc5bridge.SettingsActivity exported=1 orient=6 launcher

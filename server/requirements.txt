@@ -1,0 +1,6 @@
+# Server on a PC (Python 3.8+). The bridge runs the same code on CPython 3.14 for Android with pure-Python wheels of these packages.
+starlette>=0.27
+uvicorn>=0.22
+# record mode only (server/mc5proxy.py, MC5_UPSTREAM=1): forwarding to the real servers through a SOCKS5 proxy
+httpx>=0.24
+socksio>=1.0

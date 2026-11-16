@@ -1,0 +1,41 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.jamescrumble.mc5bridge"
+    android:versionCode="1"
+    android:versionName="0.1">
+    <!-- The game and the server it talks to meet on 127.0.0.1 inside the phone; "server at address" forwards to the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <!-- The user-visible BridgeGames/<package> folder on shared storage (original game files go there). -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <!-- Installing the prepared game. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <application
+        android:theme="@style/AppTheme"
+        android:icon="@drawable/icon"
+        android:label="Modern Combat 5"
+        android:debuggable="false"
+        android:extractNativeLibs="true"
+        android:usesCleartextTraffic="true">
+        <!-- This APK (A) only prepares and installs the game with the bridge inside (B, package of the game); B has its own manifest (patch/manifest_add.txt). -->
+        <activity
+            android:name=".SetupActivity"
+            android:label="MC5 Bridge"
+            android:screenOrientation="sensorLandscape"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

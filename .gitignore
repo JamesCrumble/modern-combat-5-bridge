@@ -1,0 +1,23 @@
+# Local toolchains (copied or fetched locally, never committed; see documentation/development.md)
+/android-sdk/
+/jdk/
+/ndk/
+/.venv/
+# Game files are the player's own (Gameloft)
+/gamebin/
+# Gameloft reference data of the server: a separate download (release/extra-data/README.md); put it here for personal builds
+/server/data/
+# Local progress notes of the project (not published)
+/docs/
+# Work area: Python for Android, smali libraries, recordings, device backups, server state, build outputs, legacy experiments
+/work/
+/release/
+/bridge/build/
+/bridge/MC5-Bridge-*
+__pycache__/
+*.pyc
+*.apk
+*.idsig
+*.keystore
+*.key
+release.pass
