@@ -47,7 +47,7 @@ public final class SetupActivity extends Activity {
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(px(20), px(16), px(20), px(24));
         col.addView(text("Modern Combat 5 — установка", 22, FG, true));
-        col.addView(text("Положите оригинальные файлы игры из Google Play в папку ниже, нажмите «Установить». Мост подготовит игру на этом телефоне.", 13, DIM, false));
+        col.addView(text("Положите в папку ниже два APK игры из Google Play и архив кэша, нажмите «Установить игру». Мост подготовит игру на этом телефоне.", 13, DIM, false));
         info = text("", 14, FG, false);
         info.setPadding(0, px(14), 0, 0);
         info.setTextIsSelectable(true);
@@ -100,14 +100,17 @@ public final class SetupActivity extends Activity {
         File folder = Storage.shared(this);
         sb.append("Папка: ").append(folder.getPath()).append('\n');
         if (!Storage.hasAccess(this)) {
-            sb.append("Нет доступа ко всем файлам — он нужен, чтобы брать файлы из этой папки. Нажмите «Установить», чтобы разрешить.\n");
+            sb.append("Нет доступа ко всем файлам — он нужен, чтобы брать файлы из этой папки. Нажмите «Установить игру», чтобы разрешить.\n");
         } else {
-            sb.append(line(new File(folder, "base.apk"), "base.apk"));
-            sb.append(line(new File(folder, "split_config.arm64_v8a.apk"), "split_config.arm64_v8a.apk"));
-            sb.append(new File(folder, "internal").isDirectory() || new File(folder, "external").isDirectory()
-                    ? "✓ данные игры (internal/, external/)\n" : "✗ нет данных игры (internal/, external/) — без паков игра не запустится, см. INSTALL.txt\n");
-            sb.append(Backend.serverData(folder, new File("/nonexistent")) != null
-                    ? "✓ данные сервера (server-data/)\n" : "✗ нет данных сервера (server-data/) — отдельная загрузка, см. INSTALL.txt\n");
+            folder.mkdirs();                    // the player puts the files here: the folder must exist once access is granted
+            File[] apks = Storage.gameApks(folder);
+            sb.append(line(apks[0], "base.apk (APK игры)"));
+            sb.append(line(apks[1], "split_config.arm64_v8a.apk (библиотеки игры)"));
+            File zip = DataImport.cacheZip(folder);
+            boolean dirs = new File(folder, "internal").isDirectory() || new File(folder, "external").isDirectory();
+            sb.append(zip != null ? "✓ кэш игры: " + zip.getName() + " (" + zip.length() / (1024 * 1024) + " МБ)\n"
+                    : dirs ? "✓ данные игры (internal/, external/)\n" : "✗ нет кэша игры (MC5-cache-….zip) — см. INSTALL.txt\n");
+            if (zip == null && Backend.serverData(folder, null, null) == null) sb.append("✗ нет данных сервера (они в архиве кэша) — см. INSTALL.txt\n");
             sb.append(new File(folder, "patched-apk.key").isFile() ? "✓ ключ подписи (patched-apk.key)\n" : "· ключ подписи будет создан\n");
         }
         PackageInfo pi = installed();
@@ -117,7 +120,7 @@ public final class SetupActivity extends Activity {
     }
 
     private static String line(File f, String name) {
-        return f.isFile() ? "✓ " + name + " (" + f.length() / (1024 * 1024) + " МБ)\n" : "✗ нет " + name + "\n";
+        return f != null && f.isFile() ? "✓ " + name + ": " + f.getName() + " (" + f.length() / (1024 * 1024) + " МБ)\n" : "✗ нет " + name + "\n";
     }
 
     private void log(final String m) {
@@ -128,9 +131,11 @@ public final class SetupActivity extends Activity {
         if (busy) return;
         if (!Storage.hasAccess(this)) { Storage.requestAccess(this, 2); return; }
         File folder = Storage.shared(this);
-        File base = new File(folder, "base.apk"), arm = new File(folder, "split_config.arm64_v8a.apk");
-        if (!base.isFile() || !arm.isFile()) {
-            new AlertDialog.Builder(this).setMessage("В папке\n" + folder.getPath() + "\nдолжны лежать base.apk и split_config.arm64_v8a.apk из Google Play.")
+        File[] apks = Storage.gameApks(folder);
+        final File base = apks[0], arm = apks[1];
+        if (base == null || arm == null) {
+            new AlertDialog.Builder(this).setMessage("В папке\n" + folder.getPath() + "\nдолжны лежать два APK игры Modern Combat 5 6.0.12a из Google Play: "
+                    + "основной (base.apk) и split_config.arm64_v8a.apk. Имена файлов не важны.")
                     .setPositiveButton("OK", null).show();
             return;
         }

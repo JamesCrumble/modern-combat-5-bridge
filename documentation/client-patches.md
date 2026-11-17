@@ -40,6 +40,7 @@ connect» без сети. Поэтому: проверки сертификат
 | `net.spec` | `UtilsNetworkStateReceiver.CheckConnectionType/hasConnectivity`, `SUtils.hasConnectivity`, `AndroidUtils.initCheckConnectionType`, `AdsUtils.GetConnectivityType`, `Device.IsWifiEnable`, `GameInstaller.V/n` | клиент всегда «онлайн по Wi-Fi»; проверка интернета установщиком (GET `https://www.google.com`) всегда успешна | сервер на `127.0.0.1` для Android — не сеть: без этого нативная часть вообще не идёт в сеть, а установщик показывает «download could not be completed» |
 | `hosts.spec` | `PushNotification/RemoteImageManager`, `installer/GlotImp/b` | Eve картинок push и телеметрия установщика (`etsv2`) → `http://127.0.0.1:18080` | Java не доверяет самоподписанному сертификату, поэтому HTTP |
 | `iap.spec` | `iab/GMPUtils$a..e` (`a(Bundle)`), `iab/s` | пять задач Google Play Billing (старт, описания товаров, покупка, расход, купленное) сначала вызывают `mc5.Store.run`; `s.v` принимает подпись-маркер `MC5LOCAL` | магазин кредитов без Google: каталог и заказы — наш сервер ([protocol.md](protocol.md#магазин-кредитов-без-google)) |
+| `didomi.spec` | `didomiwrapper/DidomiWrapper`: `StartDidomi`, `IsReady`, `ShouldConsentBeCollected`, `IsNoticeVisible`, `IsPreferencesVisible`, `SetupUI`, `Show*`/`Hide*`; класс `mc5/DidomiReady` | SDK согласий не запускается: `StartDidomi` сразу сообщает нативной части «готово» (`NativeOnReady` через главный поток, как колбэк SDK), согласие «не нужно», окна «не видны», показ — пустой | SDK Didomi грузит конфиг и веб-окно с `sdk.privacy-center.org`; без сети новый игрок навсегда вставал на загрузке первой миссии (~88 %) |
 | `trace.spec` | `installer/GameInstaller` (только «MC5 Debug») | состояния установщика в logcat (тег `mc5trace`) со стеком; класс `mc5/T` | логи Java-слоя Gameloft вырезаны ProGuard |
 
 `mc5.Store` (`bridge/src/mc5/Store.java`) — наш класс в dex моста: говорит со слоем Gameloft через рефлексию (ключи Bundle `a4`
@@ -57,11 +58,14 @@ connect» без сети. Поэтому: проверки сертификат
 | `20_file.c`, `25_openat.c` | только отладка: файлы, которые клиент не смог открыть |
 | `30_iris.c` | только отладка: логгер `[IRISCfgProvider]` (`0x1386098`), у которого в релизе нет приёмника |
 
+## Окно согласий Didomi
+
+Две меры с двух сторон. Сервер отдаёт в CRM `didomi_type: []` (без экрана возраста и согласия; `MC5_DIDOMI=on` — как в записи), а
+`didomi.spec` выключает сам SDK: без этого патча чистая установка без сети не проходила загрузку первой миссии, даже с файлами согласия
+из установки Play (кэш `files/didomi_*`, `shared_prefs/DIDOMI_*`, ключи `Didomi_*`/`IABTCF_*`). Эти файлы в архиве кэша остались —
+с ними установка проверена, но после патча они не обязательны.
+
 ## Чего правки не делают
 
-- **Didomi** (окно согласий, веб-SDK `sdk.privacy-center.org`): без сети не грузится, загрузка встаёт на ~85 %. Сейчас работает
-  за счёт данных игрока: кэш конфига в `files/` и префы согласия в `shared_prefs/` (`DIDOMI_USER_HAS_CONSENTED_SPC.xml`,
-  `FORBID_DIDOMI_*`, `Didomi_Token` и `IABTCF_*` в `<пакет>_preferences.xml`). Сервер ещё и отдаёт `didomi_type: []` в CRM.
-  Патча `DidomiWrapper` нет ([roadmap](roadmap.md)).
 - Лицензия и Play Integrity: серверы Gameloft их не проверяли, клиент сам обращается к SafetyNet, без сети это ни на что не влияет.
 - Шифрованные архивы (`strings`, `options`, `levels2`): клиент читает их сам, правки не нужны.

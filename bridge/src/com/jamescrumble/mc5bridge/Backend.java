@@ -85,7 +85,8 @@ final class Backend {
         }
         Os.setenv("MC5_STATE_MIRROR", shared != null ? new File(shared, "mc5_state.json").getPath() : "", true);
         String bald = baldDir(c, shared, data).getPath();
-        File gameData = serverData(shared, sroot);
+        File gameData = serverData(shared, DataImport.privateServerData(c), sroot);
+        if (gameData == null && DataImport.extractServerData(c) != null) gameData = serverData(shared, DataImport.privateServerData(c), sroot);
         if (gameData == null) throw new NoDataException(shared);
         PyHost.start(c, new File(root, "python"), script.getPath(),
                 "--host", s.on(Settings.SERVER_LAN) ? "0.0.0.0" : "127.0.0.1",
@@ -93,24 +94,26 @@ final class Backend {
                 "--state", new File(data, "mc5_state.json").getPath(), "--bald", bald, "--data", gameData.getPath());
     }
 
-    /** Folder with the server's Gameloft reference data (CRM, events, item catalogue, Iris pictures, campaign table). It is not part of a
-     *  release (documentation/architecture.md, release/extra-data/README.md): the player puts the downloaded `server-data` folder next to the game files,
-     *  `BridgeGames/<game>/server-data/`. Personal builds also carry it inside the APK (serverroot/server/data). Null = none found. */
-    static File serverData(File shared, File sroot) {
+    /** Folder with the server's Gameloft reference data (CRM, events, item catalogue, Iris pictures, campaign table). It is not part of the
+     *  APK of a release (documentation/architecture.md): it comes in the cache archive (server-data/, unpacked to the private {@code unpacked}
+     *  by {@link DataImport}) or as a folder {@code BridgeGames/<game>/server-data/}. Personal builds also carry it inside the APK
+     *  (serverroot/server/data). Null = none found. */
+    static File serverData(File shared, File unpacked, File sroot) {
+        java.util.List<File> cand = new java.util.ArrayList<>();
         if (shared != null) {
-            File f = new File(shared, "server-data");
-            if (new File(f, "ah/crm.json").isFile()) return f;
-            File nested = new File(f, "server-data");                    // unpacked server-data.zip into a folder of the same name
-            if (new File(nested, "ah/crm.json").isFile()) return nested;
+            cand.add(new File(shared, "server-data"));
+            cand.add(new File(shared, "server-data/server-data"));   // an archive of the folder unpacked into a folder of the same name
         }
-        File in = new File(sroot, "server/data");
-        return new File(in, "ah/crm.json").isFile() ? in : null;
+        if (unpacked != null) cand.add(unpacked);
+        if (sroot != null) cand.add(new File(sroot, "server/data"));
+        for (File f : cand) if (new File(f, "ah/crm.json").isFile()) return f;
+        return null;
     }
 
     static final class NoDataException extends Exception {
         NoDataException(File shared) {
-            super("Нет данных сервера. Скачайте server-data (ссылка в описании релиза) и положите папку server-data в "
-                    + (shared != null ? shared.getPath() : "/sdcard/BridgeGames/<пакет игры>") + "/ — должно получиться …/server-data/ah/crm.json");
+            super("Нет данных сервера. Положите архив кэша игры (MC5-cache-….zip, ссылка в описании релиза) в "
+                    + (shared != null ? shared.getPath() : "/sdcard/BridgeGames/<пакет игры>") + "/ и нажмите «Играть» ещё раз.");
         }
     }
 

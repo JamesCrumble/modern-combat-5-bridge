@@ -204,7 +204,7 @@ async def main_async(a):
     data = a.data
     missing = [f for f in DATA_FILES if not os.path.isfile(os.path.join(data, f))]
     if missing:   # Gameloft reference data is not shipped with the code (documentation/architecture.md): say exactly what is missing and stop
-        log("NO SERVER DATA in %s: missing %s (Gameloft reference data, separate download: release/extra-data/README.md)" % (data, ", ".join(missing)))
+        log("NO SERVER DATA in %s: missing %s (Gameloft reference data: server-data/ of the cache archive MC5-cache-6.0.12a.zip, documentation/development.md)" % (data, ", ".join(missing)))
         raise SystemExit(3)
     iap.DATA_DIR = data
     gaia.cfg.update(store=store, log=log, data_dir=data, public=a.public, public_tls=a.public_tls, alert_port=a.alert_port, ah_host=a.ah_host,
@@ -252,7 +252,7 @@ def main():
     ap.add_argument("--state", default=os.environ.get("MC5_STATE", os.path.join(ROOT, "work", "state", "mc5_state.json")))
     ap.add_argument("--bald", default=os.path.join(ROOT, "work", "bald6012"), help="BALD store (chapters), tools/mk_bald_store.sh")
     ap.add_argument("--data", default=os.environ.get("MC5_DATA", os.path.join(HERE, "data")),
-                    help="Gameloft reference data (ah/, iris/, ads_config.json); not in the repository, see release/extra-data/README.md")
+                    help="Gameloft reference data (ah/, iris/, ads_config.json); not in the repository: server-data/ of the cache archive")
     asyncio.run(main_async(ap.parse_args()))
 
 

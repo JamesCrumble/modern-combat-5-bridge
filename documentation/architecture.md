@@ -16,12 +16,15 @@
 Android не запускает APK без установки, а игра должна быть пропатчена. Поэтому:
 
 1. **Мост A** (`com.jamescrumble.mc5bridge`, релизный `MC5-Bridge-<версия>.apk`) — только установщик (`SetupActivity`).
-2. Игрок кладёт в `/sdcard/BridgeGames/com.gameloft.android.ANMP.GloftM5HM/`:
-   `base.apk`, `split_config.arm64_v8a.apk` (оригиналы из Play), `internal/` и `external/` (данные игры), `server-data/` (данные сервера).
+2. Игрок кладёт в `/sdcard/BridgeGames/com.gameloft.android.ANMP.GloftM5HM/` (папку создаёт мост) три файла как есть: два APK игры
+   из Play и архив кэша `MC5-cache-6.0.12a.zip`. Имена не важны: APK мост узнаёт по содержимому (`lib/arm64-v8a/libMC5.so` — split,
+   `classes4.dex` — основной), архив — по папкам `internal/`, `external/`, `server-data/` внутри.
 3. «Установить игру»: A собирает на телефоне **игру B** — совмещённый APK с пакетом игры: игра + мост внутри (патчер, ~30 с),
    подписывает её ключом этого телефона и ставит через `PackageInstaller`. Затем предлагает удалить себя.
-4. B запускается экраном моста (`SettingsActivity`). Первое «Играть» копирует `internal/` и `external/` на места
-   (`DataImport`) и закрывает приложение; со второго запуска — сервер и игра.
+4. B запускается экраном моста (`SettingsActivity`). Первое «Играть» распаковывает архив кэша прямо на места (`DataImport`):
+   `internal/` — в приватную папку игры, `external/` — в `Android/data/<пакет>/files`, `server-data/` — в приватную `files/server-data`;
+   затем закрывает приложение (игра уже прочитала свои настройки до распаковки). Со второго запуска — сервер и игра.
+   Вместо архива можно положить папки `internal/` и `external/` (и `server-data/`) — они копируются так же.
 
 Настоящей игры из Play на телефоне быть не должно: у B тот же пакет, но другая подпись.
 
@@ -29,10 +32,9 @@ Android не запускает APK без установки, а игра до�
 
 | Путь | Кто пишет | Что |
 |---|---|---|
-| `base.apk`, `split_config.arm64_v8a.apk` | игрок | оригиналы 6.0.12a; версию проверяет SHA-256 `libMC5.so` (`bridge/patch/native.spec`) |
-| `internal/` | игрок | содержимое `/data/data/<пакет>/`: `files/assetpacks` (паки, ~1,4 ГБ), `shared_prefs` (в т.ч. согласие Didomi), `databases` |
-| `external/` | игрок | содержимое `/sdcard/Android/data/<пакет>/files/`: `bald/` (главы, ~0,8 ГБ), кэши Iris, `compliancy.bin` |
-| `server-data/` | игрок | справочные данные сервера (отдельная загрузка, см. [development](development.md#данные-сервера)) |
+| два APK игры (обычно `base.apk`, `split_config.arm64_v8a.apk`) | игрок | оригиналы 6.0.12a; версию проверяет SHA-256 `libMC5.so` (`bridge/patch/native.spec`) |
+| архив кэша (`MC5-cache-6.0.12a.zip`) | игрок | `internal/` (паки `files/assetpacks` ~1,4 ГБ, кэш и файлы согласия Didomi из установки Play), `external/` (главы `bald/` ~0,8 ГБ, кэши Iris, `compliancy.bin`, `dcsbin`, `InsTime`), `server-data/` ([development](development.md#данные-сервера)); после первого запуска не нужен |
+| `internal/`, `external/`, `server-data/` | игрок | то же папками (вместо архива) |
 | `patched-apk.key` | A | ключ подписи B, создан на телефоне (RSA 2048 + самоподписанный сертификат, две строки Base64) |
 | `mc5_state.json` | B | копия состояния сервера (прогресс игрока) |
 
@@ -66,8 +68,9 @@ A предупреждает и удаляет B перед установкой
 - Сервер — тот же `server/mc5server.py`, что на ПК, без FastAPI: pydantic-core не собран под Android, поэтому маршруты и привязку
   параметров даёт маленькая замена на Starlette (`server/mc5/web.py`).
 - `Backend.startPython` запускает его с параметрами: `--state files/serverdata/mc5_state.json`, `--bald` (папка глав игры:
-  `Android/data/<пакет>/files/bald`), `--data` (папка `server-data`), `--host 127.0.0.1` или `0.0.0.0` (доступ из сети).
-  Нет `server-data` — мост показывает, что и куда положить, и сервер не запускается.
+  `Android/data/<пакет>/files/bald`), `--data` (данные сервера: `BridgeGames/<пакет>/server-data`, распакованная из архива
+  `files/server-data` или данные внутри APK личной сборки), `--host 127.0.0.1` или `0.0.0.0` (доступ из сети). Если данные есть только
+  в архиве, мост распаковывает из него `server-data/`. Нет нигде — мост пишет, что положить архив кэша, и сервер не запускается.
 - Интерпретатор стартует один раз на процесс: смена режима сервера применяется перезапуском процесса.
 - `ServerService` — служба переднего плана с уведомлением; уведомление сообщает проверенное состояние (сервер отвечает или нет).
   В режиме «доступ из сети» держит wake lock и Wi-Fi lock.
@@ -89,7 +92,7 @@ A предупреждает и удаляет B перед установкой
 
 Порты: 18080 (HTTP), 18443 (HTTPS, в т.ч. чат), 33508 (`alert`, TLS), 33600 (игровой сервер AH), 33601–33602 (только журнал).
 UDP боя мост не пересылает: своего боевого сервера пока нет ([roadmap](roadmap.md)).
-Сервер на ПК для режима «по адресу» — `server/mc5server.py --host 0.0.0.0 --data <server-data>` ([development](development.md)).
+Сервер на ПК для режима «по адресу» — `server/mc5server.py --host 0.0.0.0 --data <папка server-data из архива кэша>` ([development](development.md)).
 
 ## Сеть игры: `wrap.sh` + `libmc5net.so`
 
@@ -107,6 +110,7 @@ TCP/UDP-туннели на ПК для режима записи ([development]
 | Сборка | Скрипт | Подпись | Что внутри |
 |---|---|---|---|
 | Мост A для релиза | `tools/make_release.sh` (`RELEASE=1 bridge/build_apk.sh`) | `bridge/build/release.keystore` | нейтральная иконка, без `libmc5trace`, без `server/data` |
+| Архив кэша | `tools/make_release.sh` (`tools/mk_cache_zip.py`) | — | паки, главы, согласие Didomi, `server-data`; без учётки и сохранений |
 | Мост A для себя | `bridge/build_apk.sh` | `bridge/build/debug.keystore` | иконка игры, `libmc5trace`, `server/data` внутри (если есть) |
 | Игра B на ПК | `tools/build_full.sh` | `work/patched-apk.key` | то же, что делает A на телефоне |
 | «MC5 Debug» | `tools/build_debug.sh` | `work/debug-apk.key` | B с `libmc5trace.so`, трассой установщика, своим именем и иконкой с полосой DEBUG |

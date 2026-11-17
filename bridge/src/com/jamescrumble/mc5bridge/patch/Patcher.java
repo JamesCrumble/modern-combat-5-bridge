@@ -35,7 +35,7 @@ public final class Patcher {
         public Set<String> flags = new HashSet<>(java.util.Arrays.asList("TLS_NOVERIFY", "IAP_NOVERIFY"));
         public Map<String, String> vars = new HashMap<>();
         /** dex spec files applied to classes4.dex. */
-        public List<String> dexSpecs = new ArrayList<>(java.util.Arrays.asList("dex/net.spec", "dex/assets.spec", "dex/hosts.spec", "dex/iap.spec"));
+        public List<String> dexSpecs = new ArrayList<>(java.util.Arrays.asList("dex/net.spec", "dex/assets.spec", "dex/hosts.spec", "dex/iap.spec", "dex/didomi.spec"));
         /** The dex of the game that holds the patched classes. */
         public String patchedDex = "classes4.dex";
         /**

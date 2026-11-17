@@ -174,7 +174,7 @@ Iris `game_object`. Ответ на покупку — **новые итоги**
 - `64` (задача): `46 activity_reward` `{<награда>: итог, "tournaments_sem": участие с claimed_activities}`; повтор не начисляет.
 - `7f` (веха по очкам): `46 claim_event_milestone` c полями `_sem_event_id`, `_sem_milestone_id`, `success` (без них клиент вех не
   показывает). Известная ошибка: экран Challenges не снимает CLAIM с забранной вехи (формат поля участия у настоящего не записан).
-- CRM (`3f`): `expiry` — следующая полночь UTC; `didomi_type: []` (окно Didomi без сети не грузится; `MC5_DIDOMI=on` — как в записи).
+- CRM (`3f`): `expiry` — следующая полночь UTC; `didomi_type: []` (окно Didomi без сети не грузится; `MC5_DIDOMI=on` — как в записи). Сам SDK выключен в клиенте ([client-patches](client-patches.md#окно-согласий-didomi)).
 - Ежедневные предложения (`47`): `expiry` в минутах.
 
 ## Магазин кредитов без Google

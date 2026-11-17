@@ -6,8 +6,8 @@
 мостом и при каждом запуске поднимает внутри неё свой сервер на Python. Сервер заменяет все сервисы Gameloft, которые нужны
 клиенту: учётку, профиль игрока, кампанию, экономику, магазин, события, кланы и чат. Игра ходит только на `127.0.0.1`.
 
-Версия 0.1 — альфа. Одиночная игра и меню работают, мультиплеер (бой) — нет. Файлов игры в репозитории и в релизах нет.
-Справочных данных серверов Gameloft (каталог, CRM, события, таблица глав) тоже нет: это отдельная загрузка `server-data`.
+Версия 0.1 — альфа. Одиночная игра и меню работают, мультиплеер (бой) — нет. Файлов игры и данных Gameloft в репозитории
+и в APK нет: паки, главы и справочные данные сервера (каталог, CRM, события, таблица глав) — отдельный архив кэша.
 
 ## Состояние
 
@@ -17,7 +17,7 @@
 
 | Что | Статус | Примечание |
 |---|---|---|
-| Установка без Google Play: свои паки вместо Play Asset Delivery | ✅ | паки и главы — из данных игрока (`internal/`, `external/`) |
+| Установка без Google Play: свои паки вместо Play Asset Delivery | ✅ | паки, главы и данные сервера — один архив кэша, мост распаковывает его сам |
 | Без root, без VPN и своего CA | ✅ | проверка сертификата в клиенте отключена (`TLS_NOVERIFY`) |
 | Все адреса Gameloft → свой сервер | ✅ | `libmc5net.so` через `wrap.sh`; внешних соединений у игры нет |
 | Патч и установка игры на телефоне (мост A → игра B) | ✅ | ключ подписи создаётся на телефоне |
@@ -26,8 +26,8 @@
 | Копия прогресса в `BridgeGames/<пакет>/mc5_state.json` | ✅ | при аварийном убийстве процесса теряется до 10 с |
 | «Подключаться к другому серверу» (ПК или второй телефон) | ⚠️ | TCP проверен с сервером на ПК; два телефона не проверялись; UDP не пересылается |
 | «Доступ из локальной сети» | ⚠️ | работает по коду; с двумя телефонами не проверено |
-| Игрок без root получает паки игры | ❌ | паки лежат во внутренней папке игры из Play; нужен root или своя резервная копия |
-| Окно согласий Didomi без донорских данных | ⚠️ | согласие берётся из `shared_prefs` данных игрока; патча обёртки нет |
+| Установка тремя файлами (2 APK + архив кэша, имена любые) | ✅ | мост узнаёт файлы по содержимому |
+| Окно согласий Didomi без сети | ✅ | SDK выключен патчем `didomi.spec`; проверено чистой установкой через мост |
 
 ### Игра на своём сервере
 
@@ -74,10 +74,11 @@
 
 ## Установка (игроку)
 
-Нужны: Android 8+ arm64; оригинальные `base.apk` и `split_config.arm64_v8a.apk` игры 6.0.12a из Google Play; данные этой
-игры (паки и главы); загрузка `server-data`. Всё кладётся в `/sdcard/BridgeGames/com.gameloft.android.ANMP.GloftM5HM/`,
-затем мост-установщик готовит и ставит игру. По шагам — [INSTALL](tools/release_install.txt) (в релизе — `INSTALL.txt`),
-данные сервера — [server-data](tools/release_extra_readme.md).
+Нужны: Android 8+ arm64, ~5 ГБ свободного места; мост `MC5-Bridge-<версия>.apk`; два APK игры 6.0.12a из Google Play
+(`base.apk`, `split_config.arm64_v8a.apk`); архив кэша `MC5-cache-6.0.12a.zip`. APK и архив кладутся как есть в
+`/sdcard/BridgeGames/com.gameloft.android.ANMP.GloftM5HM/`, мост готовит и ставит игру, при первом «Играть» переносит кэш.
+Скачать: [base.apk](https://jc.home.kg/f/ca0dc656-8644-42aa-8858-3d3b260c015e/android-games/Modern-Combat-5-6.0.12a-full/base.apk), [split_config.arm64_v8a.apk](https://jc.home.kg/f/ca0dc656-8644-42aa-8858-3d3b260c015e/android-games/Modern-Combat-5-6.0.12a-full/split_config.arm64_v8a.apk), [MC5-cache-6.0.12a.zip](https://jc.home.kg/f/ca0dc656-8644-42aa-8858-3d3b260c015e/android-games/Modern-Combat-5-6.0.12a-full/MC5-cache-6.0.12a.zip).
+По шагам — [INSTALL](tools/release_install.txt) (в релизе — `INSTALL.txt`), про архив — [кэш](tools/release_cache_readme.md).
 
 ## Сборка (разработчику)
 
@@ -85,7 +86,7 @@
 где их взять — [documentation/development.md](documentation/development.md).
 
 ```sh
-tools/make_release.sh      # release/<версия>/ (APK моста, исходники, INSTALL.txt, RELEASE_NOTES.md, SHA256SUMS) и release/extra-data/
+tools/make_release.sh      # release/<версия>/ (APK моста, исходники, INSTALL.txt, RELEASE_NOTES.md, SHA256SUMS) и release/cache/ (архив кэша)
 bridge/build_apk.sh        # мост для себя: bridge/MC5-Bridge-debug.apk (данные сервера внутри, если есть server/data)
 tools/build_full.sh        # игра B на ПК тем же патчером: work/full/MC5-full.apk
 tools/build_debug.sh       # «MC5 Debug»: B с журналом сети и файлов (libmc5trace.so)
@@ -102,7 +103,7 @@ tools/run_servers.sh       # сервер на ПК + adb reverse
 | `tools/` | сборки, релиз, сервер на ПК, отладка на телефоне (`ptrace_log.c`, `campdump.c`), подготовка данных сервера, разбор форматов |
 | `documentation/` | документация |
 
-Не в репозитории: `server/data/` (данные Gameloft, отдельная загрузка), `gamebin/` (файлы игры), `work/` (рабочие данные,
+Не в репозитории: `server/data/` (данные Gameloft, они в архиве кэша), `gamebin/` (файлы игры), `work/` (рабочие данные,
 записи, сборки), тулчейны, `release/`.
 
 ## Лицензия

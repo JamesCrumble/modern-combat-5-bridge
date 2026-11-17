@@ -283,7 +283,7 @@ public final class SettingsActivity extends Activity {
     private void importData() {
         final TextView msg = new TextView(this);
         msg.setPadding(px(24), px(16), px(24), px(8));
-        msg.setText("Копирую данные игры…");
+        msg.setText("Переношу данные игры (кэш)…");
         busy = new AlertDialog.Builder(this).setTitle("Первый запуск").setView(msg).setCancelable(false).create();
         busy.show();
         new Thread(() -> {
@@ -293,7 +293,7 @@ public final class SettingsActivity extends Activity {
                     long now = System.currentTimeMillis();
                     if (now - last[0] < 300) return;
                     last[0] = now;
-                    runOnUiThread(() -> msg.setText("Копирую данные игры: " + done / (1024 * 1024) + " из " + total / (1024 * 1024) + " МБ"));
+                    runOnUiThread(() -> msg.setText("Переношу данные игры: " + done / (1024 * 1024) + " из " + total / (1024 * 1024) + " МБ"));
                 });
                 // the game's own SharedPreferences were already read when this process started: restart so that it sees the imported files
                 runOnUiThread(() -> {

@@ -14,7 +14,8 @@
 | `bridge/build/wheels/` | `starlette`, `uvicorn`, `h11`, `anyio`, `click`, `idna`, `sniffio`, `typing_extensions` — чистые колёса `py3-none-any` | PyPI |
 | `.venv/` | Python 3.8+ для сервера на ПК и инструментов: `pip install -r server/requirements.txt` | — |
 | `gamebin/latest-from-google-play-6.0.12a/apks/` | оригинальные `base.apk`, `split_config.arm64_v8a.apk` (или `GAME_APKS=<папка>`) | ваша игра из Play |
-| `server/data/` | данные сервера (`server-data`) | см. ниже |
+| `server/data/` | данные сервера (`server-data/` архива кэша) | см. ниже |
+| `gamebin/latest-from-google-play-6.0.12a/device_data*`, `external_files` | снимок установки из Play: приватная папка игры и `Android/data/<пакет>/files` (источник архива кэша; `CACHE_PRIVATE`, `CACHE_EXTERNAL`, `CACHE_EXTRA`) | копия с телефона (root или `run-as` debuggable-сборки) |
 
 `smali` под API 35 пишет dex 041 с неверным заголовком, поэтому оверлей собирается под API 34 (dex 039).
 
@@ -26,7 +27,7 @@ bridge/build_apk.sh        # мост A для себя: bridge/MC5-Bridge-debug
 RELEASE=1 bridge/build_apk.sh   # мост A релизный: bridge/MC5-Bridge-<версия>.apk, ключ bridge/build/release.keystore (+ release.pass)
 tools/build_full.sh        # игра B на ПК: work/full/MC5-full.apk (ключ work/patched-apk.key); SKIP_BASE=1 — без пересборки моста
 tools/build_debug.sh       # «MC5 Debug»: work/full/MC5-debug.apk (ключ work/debug-apk.key)
-tools/make_release.sh      # release/<версия>/ и release/extra-data/ (данные сервера отдельной загрузкой)
+tools/make_release.sh      # release/<версия>/ и release/cache/ (архив кэша для игроков: tools/mk_cache_zip.py)
 tools/build_ptrace_log.sh  # work/ptrace_log, work/campdump (отладка на телефоне)
 ```
 
@@ -47,7 +48,14 @@ tools/build_ptrace_log.sh  # work/ptrace_log, work/campdump (отладка на
 | `ah/campaign.json` | из памяти клиента: `tools/mk_campaign_json.py campdump.txt xp_dump.txt server/data/ah/campaign.json` (см. «Отладка») |
 
 Обязательные файлы перечислены в `mc5server.DATA_FILES`: без них сервер пишет `NO SERVER DATA … missing …` и останавливается.
-Готовый набор — загрузка `server-data` к релизу (`release/extra-data/`, README там же).
+Готовый набор — папка `server-data/` архива кэша `MC5-cache-6.0.12a.zip`.
+
+### Архив кэша
+
+`tools/mk_cache_zip.py` собирает архив для игроков из снимка установки из Play: паки `files/assetpacks`, файлы `didomi_*` и четыре файла
+согласия Didomi (после патча `didomi.spec` не обязательны, оставлены как проверенный набор) из `shared_prefs` (в `<пакет>_preferences.xml` скрипт допускает только ключи Didomi/IAB, иначе останавливается), главы `bald/`
+(незавершённые `temp_*` — ошибка), `iris_*_cache.bin`, `compliancy.bin`, `dcsbin`, `InsTime`, плюс `server/data` как `server-data/`.
+Записи без сжатия (паки и главы уже сжаты), архив ~2,2 ГБ с Zip64; на GitHub (лимит 2 ГБ на файл) он не помещается — выкладывается отдельно.
 
 ## Сервер на ПК
 

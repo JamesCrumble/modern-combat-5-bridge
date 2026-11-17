@@ -68,6 +68,25 @@ final class Storage {
         return d.isDirectory() ? d : null;
     }
 
+    /**
+     * The original game APKs in the folder, found by content (the file names do not matter): {base, arm64 split}, missing ones null.
+     * The split carries lib/arm64-v8a/libMC5.so, the base carries classes4.dex (the dex the patches change). Exact Play names win.
+     */
+    static File[] gameApks(File folder) {
+        File base = new File(folder, "base.apk"), arm = new File(folder, "split_config.arm64_v8a.apk");
+        File[] out = {base.isFile() ? base : null, arm.isFile() ? arm : null};
+        File[] files = folder.listFiles();
+        if (files == null) return out;
+        for (File f : files) {
+            if (!f.isFile() || !f.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".apk")) continue;
+            try (java.util.zip.ZipFile z = new java.util.zip.ZipFile(f)) {
+                if (out[1] == null && z.getEntry("lib/arm64-v8a/libMC5.so") != null) out[1] = f;
+                else if (out[0] == null && z.getEntry("classes4.dex") != null && z.getEntry("lib/arm64-v8a/libMC5.so") == null) out[0] = f;
+            } catch (IOException ignored) { }
+        }
+        return out;
+    }
+
     static File privateDir(Context c) {
         return c.getFilesDir();
     }
