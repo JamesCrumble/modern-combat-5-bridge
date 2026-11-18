@@ -319,8 +319,9 @@ public final class SettingsActivity extends Activity {
     }
 
     private void launchGame() {
+        Activity open = GameWatch.screen();   // on foldables it is MainActivityMSDuo: bring that one to the front
         Intent i = Storage.combined(this)
-                ? new Intent().setClassName(getPackageName(), Storage.GAME_PACKAGE + ".MainActivity")
+                ? new Intent().setClassName(getPackageName(), open != null ? open.getClass().getName() : Storage.GAME_PACKAGE + ".MainActivity")
                 : getPackageManager().getLaunchIntentForPackage(Storage.GAME_PACKAGE);
         if (i == null) {
             showMessage("Сервер работает, но игра не установлена.\n" + gameState());
