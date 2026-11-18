@@ -34,6 +34,8 @@ final class Backend {
         if (runningKey != null && !runningKey.equals(key)) return "restart";           // the caller restarts the process
         if (runningKey != null) return null;
         error = "";
+        BridgeLog.session(c, "игра");
+        BridgeLog.i(c, "Запуск: " + (s.custom() ? "подключение к серверу " + s.get(Settings.SERVER_ADDR) : "встроенный сервер" + (s.on(Settings.SERVER_LAN) ? ", доступ из локальной сети" : "")));
         try {
             if (s.custom()) {
                 if (!Settings.validIpv4(s.get(Settings.SERVER_ADDR))) return error = "Введите IPv4-адрес сервера";
@@ -42,6 +44,7 @@ final class Backend {
                 if (!failed.isEmpty()) {
                     forwarder.stop();
                     forwarder = null;
+                    BridgeLog.i(c, "Порты заняты: " + failed);
                     return error = "Порты заняты другим приложением (adb reverse?): " + failed;
                 }
             } else {
@@ -50,8 +53,10 @@ final class Backend {
             runningKey = key;
             return null;
         } catch (NoDataException e) {
+            BridgeLog.i(c, e.getMessage());
             return error = e.getMessage();
         } catch (Throwable t) {
+            BridgeLog.e(c, "Не удалось запустить сервер", t);
             return error = "Не удалось запустить сервер: " + t;
         }
     }
@@ -70,7 +75,7 @@ final class Backend {
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         }
         Os.setenv("MC5_SERVERROOT", sroot.getPath(), true);
-        Os.setenv("MC5_LOGFILE", new File(data, "server.log").getPath(), true);
+        Os.setenv("MC5_LOGFILE", BridgeLog.serverFile(c).getPath(), true);   // BridgeGames/<game>/server.log (or the private one)
         Os.setenv("MC5_UVICORN_LOG", s.on(Settings.SERVER_DEBUG) ? "debug" : "warning", true);
         String tls = new File(sroot, "server/tls").getPath();
         File shared = Storage.sharedOrNull(c);
@@ -88,6 +93,7 @@ final class Backend {
         File gameData = serverData(shared, DataImport.privateServerData(c), sroot);
         if (gameData == null && DataImport.extractServerData(c) != null) gameData = serverData(shared, DataImport.privateServerData(c), sroot);
         if (gameData == null) throw new NoDataException(shared);
+        BridgeLog.i(c, "Данные сервера: " + gameData.getPath() + "; главы: " + bald);
         PyHost.start(c, new File(root, "python"), script.getPath(),
                 "--host", s.on(Settings.SERVER_LAN) ? "0.0.0.0" : "127.0.0.1",
                 "--tls-cert", tls + "/self.pem", "--tls-key", tls + "/self.key",
@@ -163,12 +169,12 @@ final class Backend {
         File dst = new File(shared, "mc5_state.json");
         File tmp = new File(shared, "mc5_state.json.tmp");
         if (copy(state, tmp) && tmp.renameTo(dst)) {
-            android.util.Log.i("mc5bridge", "flushMirror: " + dst.length() + " bytes");
+            BridgeLog.i(c, "Прогресс скопирован в mc5_state.json: " + dst.length() + " bytes");
             return;
         }
         // MediaProvider can refuse the rename on shared storage: write the mirror itself (a copy of 150 KB, so a tear is unlikely and the next save repairs it)
         tmp.delete();
-        android.util.Log.i("mc5bridge", "flushMirror: rename failed, direct copy " + copy(state, dst) + ", " + dst.length() + " bytes");
+        BridgeLog.i(c, "Прогресс: rename failed, direct copy " + copy(state, dst) + ", " + dst.length() + " bytes");
     }
 
     private static boolean copy(File from, File to) {

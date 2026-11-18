@@ -98,8 +98,10 @@ MC5_UPSTREAM=1 MC5_TRACE=work/real/<запись> MC5_SOCKS=<host:port SOCKS5> t
 
 ## Отладка
 
-- **Журналы:** сервер — `files/serverdata/server.log` в B (экран моста → «Показать журнал») или `work/server_run.log` на ПК;
+- **Журналы:** на телефоне — `BridgeGames/<пакет>/mc5.log` (установщик и мост) и `server.log` (сервер); экран моста → «Показать журнал
+  сервера» или кнопка в уведомлении; на ПК — `work/server_run.log`;
   все кадры AH — `ah_frames.jsonl` рядом с состоянием; logcat: `python` (сервер в мосте), `mc5bridge` (мост), `mc5trace` («MC5 Debug»).
+  Буфер logcat у некоторых прошивок вмещает меньше минуты: `adb logcat -G 16M`.
 - **Данные B без root:** B — debuggable, поэтому `adb shell run-as com.gameloft.android.ANMP.GloftM5HM …` читает и пишет его папку;
   править состояние — только при остановленной игре (`am force-stop`), файлы — через `/data/local/tmp`.
 - **`ptrace_log`** (`tools/ptrace_log.c`): точки останова в `libMC5.so`, печать строки (`std::string`, `:p` — `char*`) или 2 КБ памяти

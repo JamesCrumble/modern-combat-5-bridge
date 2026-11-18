@@ -30,7 +30,7 @@ cp work/mc5trace/libmc5net.so work/mc5trace/wrap-net.sh "$OUT/lib/arm64-v8a/"
 mkdir -p "$OUT/gen/com/jamescrumble/mc5bridge"
 cat > "$OUT/gen/com/jamescrumble/mc5bridge/BuildInfo.java" <<JAVA
 package com.jamescrumble.mc5bridge;
-final class BuildInfo { static final String STAMP = "$(date +%Y%m%d%H%M%S)"; private BuildInfo() {} }
+final class BuildInfo { static final String STAMP = "$(date +%Y%m%d%H%M%S)", VERSION = "$(grep -o 'versionName="[^"]*"' bridge/AndroidManifest.xml | head -1 | cut -d'"' -f2)"; private BuildInfo() {} }
 JAVA
 cp -a bridge/res/. "$OUT/res/"
 # launcher icon: the game's own icon (like the other bridges) in personal builds; RELEASE=1 keeps the neutral one (no game artwork in a release)

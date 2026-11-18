@@ -121,7 +121,8 @@ class Wrapper:
         gaia.LOG.append({"t": round(time.time(), 3), "line": line, "host": host, "body": body[:2000].decode("latin1"),
                          "status": status.get("code")})
         del gaia.LOG[:-2000]
-        log("%s -> %s" % (line[:200], status.get("code")))
+        if not (scope.get("path") == "/_mc5/ready" and status.get("code") == 200):   # the bridge's liveness probe: every few seconds
+            log("%s -> %s" % (line[:200], status.get("code")))
 
 
 async def log_only(port: int, name: str = "", cert: str = None, key: str = None, host: str = "127.0.0.1"):

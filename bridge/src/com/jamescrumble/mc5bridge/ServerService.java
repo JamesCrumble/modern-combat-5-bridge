@@ -129,7 +129,7 @@ public final class ServerService extends Service {
                     + ". Проверьте адрес и что сервер запущен.");
         } else {
             title = ok ? "Modern Combat 5: сервер работает" : "Modern Combat 5: сервер не отвечает";
-            text.append(ok ? "Сервер на этом телефоне (127.0.0.1:18080)" : "Встроенный сервер не отвечает. Журнал: в приложении, «Показать журнал сервера».");
+            text.append(ok ? "Сервер на этом телефоне (127.0.0.1:18080)" : "Встроенный сервер не отвечает. Что случилось — «Журнал сервера» ниже.");
             if (ok && lan) {
                 List<String> ips = addresses();
                 if (ips.isEmpty()) text.append("\nЛокальная сеть: нет подключения к Wi-Fi");
@@ -138,7 +138,7 @@ public final class ServerService extends Service {
         }
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, SettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        return new Notification.Builder(this, CHANNEL)
+        Notification.Builder b = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
                 .setContentTitle(title)
                 .setContentText(text.toString().split("\n")[0])
@@ -146,8 +146,14 @@ public final class ServerService extends Service {
                 .setContentIntent(open)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setCategory(Notification.CATEGORY_SERVICE)
-                .build();
+                .setCategory(Notification.CATEGORY_SERVICE);
+        if (!remote) {   // the built-in server writes the log; with another server there is none on this phone
+            PendingIntent log = PendingIntent.getActivity(this, 1, new Intent(this, LogActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource("android",
+                    android.R.drawable.ic_menu_info_details), "Журнал сервера", log).build());
+        }
+        return b.build();
     }
 
     /** Checks the server every few seconds and refreshes the notification when the answer changes. */

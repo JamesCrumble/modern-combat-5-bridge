@@ -39,6 +39,7 @@ public final class SetupActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         setTheme(android.R.style.Theme_Material_NoActionBar);
         super.onCreate(state);
+        BridgeLog.hookCrashes(this);
         getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xFF000000));
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
@@ -124,6 +125,7 @@ public final class SetupActivity extends Activity {
     }
 
     private void log(final String m) {
+        BridgeLog.i(getApplicationContext(), "[установка] " + m);
         runOnUiThread(() -> steps.setText(steps.getText() + (steps.length() > 0 ? "\n" : "") + m));
     }
 
@@ -165,6 +167,8 @@ public final class SetupActivity extends Activity {
         busy = true;
         go.setEnabled(false);
         steps.setText("");
+        BridgeLog.session(getApplicationContext(), "установщик");
+        BridgeLog.i(getApplicationContext(), "[установка] APK игры: " + base.getName() + " (" + base.length() + " Б), " + arm.getName() + " (" + arm.length() + " Б)");
         new Thread(() -> {
             try {
                 Keys keys;
@@ -183,7 +187,8 @@ public final class SetupActivity extends Activity {
                 builtApk = out;
                 runOnUiThread(() -> { if (removeOld) uninstallOld(); else install(); });
             } catch (Throwable t) {
-                log("Ошибка: " + t.getMessage());
+                BridgeLog.e(getApplicationContext(), "[установка] Ошибка сборки игры", t);
+                runOnUiThread(() -> steps.setText(steps.getText() + "\nОшибка: " + t.getMessage()));
                 runOnUiThread(() -> { busy = false; refresh(); });
             }
         }, "bridge-patch").start();

@@ -46,6 +46,8 @@ public final class SettingsActivity extends Activity {
         getWindow().setNavigationBarColor(0xFF12161A);
         dp = getResources().getDisplayMetrics().density;
         settings = Settings.load(this);
+        GameWatch.install(this);
+        BridgeLog.hookCrashes(this);
 
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
@@ -227,13 +229,7 @@ public final class SettingsActivity extends Activity {
     }
 
     private void showLog() {
-        String t = Storage.tail(new File(Storage.privateDir(this), "serverdata/server.log"), 120);
-        TextView tv = text(t.isEmpty() ? "Журнал пуст (сервер ещё не запускался)." : t, 11, FG, false);
-        tv.setTextIsSelectable(true);
-        tv.setTypeface(android.graphics.Typeface.MONOSPACE);
-        ScrollView sv = new ScrollView(this);
-        sv.addView(tv);
-        new AlertDialog.Builder(this).setTitle("Журнал сервера").setView(sv).setPositiveButton("Закрыть", null).show();
+        startActivity(new Intent(this, LogActivity.class));
     }
 
     // ------------------------------------------------------------ play
@@ -241,6 +237,13 @@ public final class SettingsActivity extends Activity {
     /** Starts the backend (off the UI thread), waits until it answers, then starts the game. */
     private void play() {
         if (Storage.combined(this) && DataImport.pending(this)) { importData(); return; }
+        if (GameWatch.running()) { launchGame(); return; }              // the game is open: back to it, a second one would close itself
+        if (GameWatch.ended()) {                                         // the game ran in this process and was closed: only a new process starts it
+            new AlertDialog.Builder(this).setMessage("Игра была закрыта, а мост остался работать. Мост перезапустится — если экран не откроется сам, "
+                    + "откройте приложение и нажмите «Играть».").setCancelable(false)
+                    .setPositiveButton("OK", (d, w) -> Backend.restartProcess(getApplicationContext())).show();
+            return;
+        }
         busy = new AlertDialog.Builder(this).setTitle(settings.custom() ? "Подключение" : "Запуск")
                 .setMessage(settings.custom() ? "Подключаюсь к серверу " + settings.get(Settings.SERVER_ADDR) + "…" : "Запускаю сервер…").setCancelable(false).create();
         busy.show();
@@ -255,6 +258,7 @@ public final class SettingsActivity extends Activity {
                 return;
             }
             if (err != null) {
+                BridgeLog.i(getApplicationContext(), "Не запущено: " + err);
                 runOnUiThread(() -> { busy.dismiss(); refresh(); showMessage(err); });
                 return;
             }
@@ -266,6 +270,7 @@ public final class SettingsActivity extends Activity {
                 if (!s.custom() && !PyHost.running()) break;
             }
             final boolean ready = ok;
+            BridgeLog.i(getApplicationContext(), ready ? "Сервер отвечает, запускаю игру" : "Сервер не ответил" + (s.custom() ? " (" + s.get(Settings.SERVER_ADDR) + ")" : ""));
             runOnUiThread(() -> {
                 busy.dismiss();
                 refresh();
@@ -288,6 +293,8 @@ public final class SettingsActivity extends Activity {
         busy.show();
         new Thread(() -> {
             try {
+                BridgeLog.session(getApplicationContext(), "игра, первый запуск");
+                BridgeLog.i(getApplicationContext(), "Переношу кэш игры");
                 final long[] last = {0};
                 DataImport.run(getApplicationContext(), (done, total) -> {
                     long now = System.currentTimeMillis();
@@ -295,6 +302,7 @@ public final class SettingsActivity extends Activity {
                     last[0] = now;
                     runOnUiThread(() -> msg.setText("Переношу данные игры: " + done / (1024 * 1024) + " из " + total / (1024 * 1024) + " МБ"));
                 });
+                BridgeLog.i(getApplicationContext(), "Кэш перенесён");
                 // the game's own SharedPreferences were already read when this process started: restart so that it sees the imported files
                 runOnUiThread(() -> {
                     busy.dismiss();
@@ -304,6 +312,7 @@ public final class SettingsActivity extends Activity {
                             .setPositiveButton("OK", (d, w) -> android.os.Process.killProcess(android.os.Process.myPid())).show();
                 });
             } catch (Exception e) {
+                BridgeLog.e(getApplicationContext(), "Не удалось перенести кэш игры", e);
                 runOnUiThread(() -> { busy.dismiss(); showMessage("Не удалось скопировать данные игры: " + e.getMessage()); });
             }
         }, "bridge-data").start();
@@ -317,7 +326,7 @@ public final class SettingsActivity extends Activity {
             showMessage("Сервер работает, но игра не установлена.\n" + gameState());
             return;
         }
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);   // a running game comes to the front
         startActivity(i);
     }
 
