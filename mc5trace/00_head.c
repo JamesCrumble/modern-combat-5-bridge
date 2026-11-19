@@ -1,7 +1,7 @@
 /* mc5trace: LD_PRELOAD library for the MC5 client (loaded by lib/arm64-v8a/wrap.sh in the debuggable build, no root).
  * Logs to logcat (tag mc5trace) and to $MC5TRACE_FILE: name lookups, connects, the start of plain HTTP traffic,
  * files the client fails to open, and the Gaia config logger [IRISCfgProvider] (which has no sink in release).
- * Build: tools/build_mc5trace.sh (NDK in ./ndk). Pieces are in mc5trace/ and concatenated into work/mc5trace/mc5trace.c. */
+ * Build: tools/build_mc5trace.sh (NDK in ../__shared-third-party__/ndk). Pieces are in mc5trace/ and concatenated into work/mc5trace/mc5trace.c. */
 #define _GNU_SOURCE
 #include <android/log.h>
 #include <arpa/inet.h>

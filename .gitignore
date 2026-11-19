@@ -1,6 +1,9 @@
-# Local toolchains (copied or fetched locally, never committed; see documentation/development.md)
+# Third-party toolchains/sources/downloads: the project may hold a local copy (it takes precedence), by default they come from ../__shared-third-party__
 /android-sdk/
 /jdk/
+/sdl-arm/
+/downloads/
+/qemu-src/
 /ndk/
 /.venv/
 # Game files are the player's own (Gameloft)

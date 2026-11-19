@@ -6,9 +6,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 source env.sh
+tp() { [ -e "$PWD/${2:-$1}" ] && echo "$PWD/${2:-$1}" || echo "${SHARED_3P:-$PWD/../__shared-third-party__}/$1"; }  # third-party: this project first (run from the project root), then ../__shared-third-party__
 BT="$ANDROID_HOME/build-tools/34.0.0"
 PLATFORM="$ANDROID_HOME/platforms/android-34/android.jar"
-NDKBIN="$ROOT/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+NDKBIN="$(tp ndk)/toolchains/llvm/prebuilt/linux-x86_64/bin"
 B=bridge/build
 OUT=$B/apk
 [ -f "$B/python.zip" ] || bridge/tools/mk_pyhome.sh
@@ -16,7 +17,7 @@ bridge/tools/mk_serverroot.sh
 rm -rf "$OUT"; mkdir -p "$OUT"/{classes,dex,gen,res,lib/arm64-v8a,assets}
 
 # native: JNI host of the embedded Python
-PY=work/pyandroid/prefix
+PY="$(tp pyandroid work/pyandroid)/prefix"
 "$NDKBIN/aarch64-linux-android24-clang" -shared -fPIC -O2 -Wl,-z,max-page-size=16384 -Wl,--build-id=none \
     -I "$PY/include/python3.14" bridge/jni/pyhost.c -L "$PY/lib" -lpython3.14 -llog -o "$OUT/lib/arm64-v8a/libpyhost.so"
 "$NDKBIN/llvm-strip" --strip-unneeded "$OUT/lib/arm64-v8a/libpyhost.so"
@@ -44,7 +45,8 @@ fi
 "$BT/aapt2" link --manifest bridge/AndroidManifest.xml -I "$PLATFORM" --java "$OUT/gen" --min-sdk-version 26 --target-sdk-version 34 \
     -o "$OUT/base.ap_" "$OUT/resources.zip"
 # the patcher libraries (documentation/architecture.md): smali/baksmali for the dex patches, apksig for the signature
-LIBJARS=$(ls work/tools/smali/smali-*.jar work/tools/smali/guava-*.jar work/tools/smali/failureaccess-*.jar work/tools/smali/antlr-runtime-*.jar "$BT/lib/apksigner.jar" | tr '\n' ' ')
+SMALI=$(tp tools/smali work/tools/smali)
+LIBJARS=$(ls "$SMALI"/smali-*.jar "$SMALI"/guava-*.jar "$SMALI"/failureaccess-*.jar "$SMALI"/antlr-runtime-*.jar "$BT/lib/apksigner.jar" | tr '\n' ' ')
 find "$OUT/gen" bridge/src -name '*.java' -print0 | xargs -0 javac -source 8 -target 8 -encoding UTF-8 -Xlint:-options -classpath "$PLATFORM:$(echo $LIBJARS | tr ' ' ':')" -d "$OUT/classes"
 "$BT/d8" --lib "$PLATFORM" --min-api 26 --output "$OUT/dex" $(find "$OUT/classes" -name '*.class') $LIBJARS
 

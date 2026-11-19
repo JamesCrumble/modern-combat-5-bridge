@@ -1,7 +1,8 @@
 #!/bin/sh
 # adb for the project scripts: $ADB if set; under WSL the Windows adb.exe of android-sdk/ (it sees the phone over Windows USB; paths for push/install
 # need `wslpath -w`); otherwise android-sdk/platform-tools/adb or adb from PATH.
-D="$(dirname "$0")/../android-sdk/platform-tools"
+R="$(dirname "$0")/.."; [ -e "$R/android-sdk" ] || R="$R/../__shared-third-party__"   # project first, then shared
+D="$R/android-sdk/platform-tools"
 if [ -n "$ADB" ]; then exec "$ADB" "$@"; fi
 if grep -qi microsoft /proc/version 2>/dev/null && [ -x "$D/adb.exe" ]; then exec "$D/adb.exe" "$@"; fi
 if [ -x "$D/adb" ]; then exec "$D/adb" "$@"; fi

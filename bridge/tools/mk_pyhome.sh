@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Stages the Python runtime for the bridge APK (documentation/architecture.md): build/stage/python (pruned stdlib incl. lib-dynload) -> build/python.zip,
-# interpreter libraries -> build/jnilibs/arm64-v8a. Source: work/pyandroid (python-3.14.0-aarch64-linux-android.tar.gz from python.org).
+# interpreter libraries -> build/jnilibs/arm64-v8a. Source: pyandroid (work/pyandroid, else ../__shared-third-party__/pyandroid) (python-3.14.0-aarch64-linux-android.tar.gz from python.org).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-SRC=work/pyandroid/prefix
-[ -d "$SRC" ] || { echo "unpack python-3.14.0-aarch64-linux-android.tar.gz into work/pyandroid first" >&2; exit 1; }
+tp() { [ -e "$PWD/${2:-$1}" ] && echo "$PWD/${2:-$1}" || echo "${SHARED_3P:-$PWD/../__shared-third-party__}/$1"; }  # third-party: this project first (run from the project root), then ../__shared-third-party__
+SRC=$(tp pyandroid work/pyandroid)/prefix
+[ -d "$SRC" ] || { echo "unpack python-3.14.0-aarch64-linux-android.tar.gz into work/pyandroid or ../__shared-third-party__/pyandroid first" >&2; exit 1; }
 B=bridge/build; rm -rf "$B/stage" "$B/jnilibs" "$B/python.zip"
 mkdir -p "$B/stage/python/lib" "$B/jnilibs/arm64-v8a"
 cp -a "$SRC/lib/python3.14" "$B/stage/python/lib/"

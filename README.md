@@ -88,7 +88,7 @@
 
 ## Сборка (разработчику)
 
-Тулчейны — локальные, в корне проекта (`jdk/`, `android-sdk/`, `ndk/`), Python для Android и библиотеки — в `work/`;
+Тулчейны и зависимости — в общей папке `../__shared-third-party__` (`jdk/`, `android-sdk/`, `ndk/`, `pyandroid/` — Python для Android, `tools/` — smali и apktool);
 где их взять — [documentation/development.md](documentation/development.md).
 
 ```sh

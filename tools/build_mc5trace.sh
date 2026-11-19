@@ -2,16 +2,17 @@
 # Builds the redirect libraries for the game (mc5trace/*.c -> work/mc5trace/mc5trace.c):
 #   work/mc5trace/libmc5trace.so + wrap-trace.sh : debug build "MC5 Debug" (logs to logcat and $MC5TRACE_FILE, tunnels to the PC, documentation/protocol.md)
 #   work/mc5trace/libmc5net.so   + wrap-net.sh   : product build (-DMC5_QUIET: no log, no file hooks; hosts of Gameloft -> 127.0.0.1)
-# The bridge APK carries both; the patcher puts the right pair into the game's lib/arm64-v8a as libXXX.so + wrap.sh. Needs the NDK in ./ndk.
+# The bridge APK carries both; the patcher puts the right pair into the game's lib/arm64-v8a as libXXX.so + wrap.sh. Needs the NDK (./ndk, else ../__shared-third-party__/ndk).
 set -euo pipefail
 cd "$(dirname "$0")/.."
+tp() { [ -e "$PWD/${2:-$1}" ] && echo "$PWD/${2:-$1}" || echo "${SHARED_3P:-$PWD/../__shared-third-party__}/$1"; }  # third-party: this project first (run from the project root), then ../__shared-third-party__
 mkdir -p work/mc5trace
 cat mc5trace/*.c > work/mc5trace/mc5trace.c
-CC=ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+CC=$(tp ndk)/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
 mkdir -p work/mc5trace
 $CC -shared -fPIC -O2 -Wall -Wextra -o work/mc5trace/libmc5trace.so work/mc5trace/mc5trace.c -llog -ldl
 $CC -shared -fPIC -O2 -DMC5_QUIET -Wno-unused-function -Wno-unused-parameter -Wno-unused-variable -o work/mc5trace/libmc5net.so work/mc5trace/mc5trace.c -llog -ldl
-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded work/mc5trace/libmc5net.so
+$(tp ndk)/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded work/mc5trace/libmc5net.so
 cat > work/mc5trace/wrap-trace.sh <<'W'
 #!/system/bin/sh
 HERE="$(cd "$(dirname "$0")" && pwd)"

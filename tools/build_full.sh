@@ -7,6 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source env.sh
+tp() { [ -e "$PWD/${2:-$1}" ] && echo "$PWD/${2:-$1}" || echo "${SHARED_3P:-$PWD/../__shared-third-party__}/$1"; }  # third-party: this project first (run from the project root), then ../__shared-third-party__
 SRC=${GAME_APKS:-gamebin/latest-from-google-play-6.0.12a/apks}   # folder with the original base.apk and split_config.arm64_v8a.apk
 OUT=work/full
 PC=bridge/build/pc
@@ -15,12 +16,12 @@ if [ "${SKIP_BASE:-0}" != 1 ]; then
     bridge/build_apk.sh >/dev/null
 fi
 rm -rf "$OUT" "$PC"; mkdir -p "$OUT" "$PC"
-CP=$(ls work/tools/smali/*.jar android-sdk/build-tools/34.0.0/lib/apksigner.jar | tr '\n' ':')
+CP=$(ls "$(tp tools/smali work/tools/smali)"/*.jar "$ANDROID_HOME"/build-tools/34.0.0/lib/apksigner.jar | tr '\n' ':')
 # the patcher classes were compiled by bridge/build_apk.sh (bridge/build/apk/classes); PcMain is the PC front
 javac -nowarn -source 8 -target 8 -Xlint:-options -cp "bridge/build/apk/classes:$CP" -d "$PC" bridge/pc/PcMain.java
 java -cp "$PC:bridge/build/apk/classes:$CP" PcMain "$SRC/base.apk" "$SRC/split_config.arm64_v8a.apk" bridge/MC5-Bridge-debug.apk \
     "$OUT/MC5-full.apk" "$OUT/work" work/patched-apk.key bridge/patch
 rm -rf "$OUT/work"
-android-sdk/build-tools/34.0.0/apksigner verify --verbose "$OUT/MC5-full.apk" | head -3
-android-sdk/build-tools/34.0.0/aapt2 dump badging "$OUT/MC5-full.apk" 2>&1 | grep -E "^package|launchable-activity|native-code" | cut -c1-160
+"$ANDROID_HOME"/build-tools/34.0.0/apksigner verify --verbose "$OUT/MC5-full.apk" | head -3
+"$ANDROID_HOME"/build-tools/34.0.0/aapt2 dump badging "$OUT/MC5-full.apk" 2>&1 | grep -E "^package|launchable-activity|native-code" | cut -c1-160
 ls -l "$OUT/MC5-full.apk"

@@ -6,11 +6,11 @@
 
 | Путь | Что | Откуда |
 |---|---|---|
-| `jdk/` | JDK 17+ (`javac`, `keytool`) | любой OpenJDK |
-| `android-sdk/` | build-tools **34.0.0** (`aapt2`, `d8`, `zipalign`, `apksigner`), platform **android-34**, platform-tools (`adb`) | Android SDK command-line tools |
-| `ndk/` | Android NDK **r27c** | developer.android.com |
-| `work/pyandroid/` | распакованный `python-3.14.0-aarch64-linux-android.tar.gz` (`prefix/`) | python.org (официальная сборка для Android) |
-| `work/tools/smali/` | `smali`, `smali-baksmali`, `smali-dexlib2`, `smali-util` **3.0.10**, `guava-31.1-android`, `failureaccess`, `antlr-runtime-3.5.2`, `jsr305` | Google Maven / Maven Central (`apktool.jar` не годится: урезан) |
+| `../__shared-third-party__/jdk/` | JDK 17+ (`javac`, `keytool`) | любой OpenJDK |
+| `../__shared-third-party__/android-sdk/` | build-tools **34.0.0** (`aapt2`, `d8`, `zipalign`, `apksigner`), platform **android-34**, platform-tools (`adb`) | Android SDK command-line tools |
+| `../__shared-third-party__/ndk/` | Android NDK **r27c** | developer.android.com |
+| `../__shared-third-party__/pyandroid/` | распакованный `python-3.14.0-aarch64-linux-android.tar.gz` (`prefix/`) | python.org (официальная сборка для Android) |
+| `../__shared-third-party__/tools/smali/` | `smali`, `smali-baksmali`, `smali-dexlib2`, `smali-util` **3.0.10**, `guava-31.1-android`, `failureaccess`, `antlr-runtime-3.5.2`, `jsr305` | Google Maven / Maven Central (`apktool.jar` не годится: урезан) |
 | `bridge/build/wheels/` | `starlette`, `uvicorn`, `h11`, `anyio`, `click`, `idna`, `sniffio`, `typing_extensions` — чистые колёса `py3-none-any` | PyPI |
 | `.venv/` | Python 3.8+ для сервера на ПК и инструментов: `pip install -r server/requirements.txt` | — |
 | `gamebin/latest-from-google-play-6.0.12a/apks/` | оригинальные `base.apk`, `split_config.arm64_v8a.apk` (или `GAME_APKS=<папка>`) | ваша игра из Play |
