@@ -92,7 +92,7 @@ final class Backend {
         String bald = baldDir(c, shared, data).getPath();
         File gameData = serverData(shared, DataImport.privateServerData(c), sroot);
         if (gameData == null && DataImport.extractServerData(c) != null) gameData = serverData(shared, DataImport.privateServerData(c), sroot);
-        if (gameData == null) throw new NoDataException(shared);
+        if (gameData == null) throw new NoDataException(shared, shared != null ? DataImport.explain(shared) : null);
         BridgeLog.i(c, "Данные сервера: " + gameData.getPath() + "; главы: " + bald);
         PyHost.start(c, new File(root, "python"), script.getPath(),
                 "--host", s.on(Settings.SERVER_LAN) ? "0.0.0.0" : "127.0.0.1",
@@ -117,9 +117,10 @@ final class Backend {
     }
 
     static final class NoDataException extends Exception {
-        NoDataException(File shared) {
+        NoDataException(File shared, String why) {
             super("Нет данных сервера. Положите архив кэша игры (MC5-cache-….zip, ссылка в описании релиза) в "
-                    + (shared != null ? shared.getPath() : "/sdcard/BridgeGames/<пакет игры>") + "/ и нажмите «Играть» ещё раз.");
+                    + (shared != null ? shared.getPath() : "/sdcard/BridgeGames/<пакет игры>") + "/ и нажмите «Играть» ещё раз."
+                    + (why != null ? "\n\n" + why : ""));
         }
     }
 

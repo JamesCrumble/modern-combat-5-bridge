@@ -58,10 +58,69 @@ final class DataImport {
         try (ZipFile z = new ZipFile(zip)) {
             Enumeration<? extends ZipEntry> en = z.entries();
             while (en.hasMoreElements()) if (en.nextElement().getName().startsWith(top)) return true;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             return false;
         }
         return false;
+    }
+
+    /**
+     * Why no game cache was found, for the player and mc5.log: every entry of the folder, its name in quotes (so stray spaces and double
+     * extensions like "….zip.zip" show), and why it was or was not taken.
+     */
+    static String explain(File folder) {
+        File[] files = folder == null ? null : folder.listFiles();
+        if (files == null) return "Папка " + q(String.valueOf(folder)) + " не читается.";
+        if (files.length == 0) return "Папка " + q(folder.getPath()) + " пуста.";
+        java.util.Arrays.sort(files);
+        StringBuilder sb = new StringBuilder("Содержимое папки " + q(folder.getPath()) + ":");
+        for (File f : files) sb.append("\n• ").append(q(f.getName())).append(" — ").append(verdict(f));
+        return sb.toString();
+    }
+
+    private static String verdict(File f) {
+        String name = f.getName(), low = name.toLowerCase(java.util.Locale.ROOT);
+        if (f.isDirectory()) {
+            if (name.equals("internal") || name.equals("external")) return "папка с данными игры вместо архива: берётся при первом запуске";
+            if (name.equals("server-data")) {
+                return new File(f, "ah/crm.json").isFile() || new File(f, "server-data/ah/crm.json").isFile()
+                        ? "папка с данными сервера вместо архива: берётся" : "папка server-data, но в ней нет \"ah/crm.json\": не берётся";
+            }
+            return "папка, не используется";
+        }
+        String size = f.length() + " байт";
+        if (!low.endsWith(".zip")) {
+            return "файл, " + size + ": не архив кэша" + (low.contains(".zip") ? " (имя не заканчивается на \".zip\" — скачивание не закончено или файл переименован)" : "");
+        }
+        return "zip, " + size + ": " + problem(f);
+    }
+
+    /** What is wrong with this .zip as the cache archive ("подходит" when nothing). */
+    private static String problem(File zip) {
+        java.util.Set<String> tops = new java.util.TreeSet<>();
+        boolean crm = false;
+        try (ZipFile z = new ZipFile(zip)) {
+            for (Enumeration<? extends ZipEntry> en = z.entries(); en.hasMoreElements(); ) {
+                String n = en.nextElement().getName();
+                int i = n.indexOf('/');
+                tops.add(i < 0 ? n : n.substring(0, i + 1));
+                crm |= n.equals(SERVER_DATA + "ah/crm.json");
+            }
+        } catch (IOException | RuntimeException e) {
+            return "не открывается как zip (" + e + ") — скачан не полностью или повреждён, скачайте заново.";
+        }
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        for (String t : new String[] {INTERNAL, EXTERNAL, SERVER_DATA}) if (!tops.contains(t)) missing.add(q(t));
+        if (missing.isEmpty()) return crm ? "подходит" : "в \"server-data/\" нет \"ah/crm.json\" — архив неполный, скачайте заново.";
+        java.util.List<String> seen = new java.util.ArrayList<>();
+        for (String t : tops) seen.add(q(t));
+        String list = seen.size() <= 8 ? String.join(", ", seen) : String.join(", ", seen.subList(0, 8)) + " и ещё " + (seen.size() - 8);
+        return "в корне архива нет " + String.join(", ", missing) + "; в корне: " + list
+                + ". Папки \"internal/\", \"external/\", \"server-data/\" должны лежать прямо в корне архива, без папки над ними.";
+    }
+
+    private static String q(String s) {
+        return "\"" + s + "\"";
     }
 
     /** Is there something to import and has it not been imported yet? */

@@ -110,7 +110,7 @@ public final class SetupActivity extends Activity {
             File zip = DataImport.cacheZip(folder);
             boolean dirs = new File(folder, "internal").isDirectory() || new File(folder, "external").isDirectory();
             sb.append(zip != null ? "✓ кэш игры: " + zip.getName() + " (" + zip.length() / (1024 * 1024) + " МБ)\n"
-                    : dirs ? "✓ данные игры (internal/, external/)\n" : "✗ нет кэша игры (MC5-cache-….zip) — см. INSTALL.txt\n");
+                    : dirs ? "✓ данные игры (internal/, external/)\n" : "✗ нет кэша игры (MC5-cache-….zip) — см. INSTALL.txt\n" + DataImport.explain(folder) + "\n");
             if (zip == null && Backend.serverData(folder, null, null) == null) sb.append("✗ нет данных сервера (они в архиве кэша) — см. INSTALL.txt\n");
             sb.append(new File(folder, "patched-apk.key").isFile() ? "✓ ключ подписи (patched-apk.key)\n" : "· ключ подписи будет создан\n");
         }
