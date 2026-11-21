@@ -103,7 +103,19 @@ class Economy:
     def inv(prof: dict) -> dict:
         return prof.setdefault("_inventory", {})
 
+    def full_energy(self, prof: dict) -> int:
+        """Energy is not a count but a time in minutes: energy = (now - value) / unit_restore_time, capped at max_qty (recordings:
+        a full player gets now - 50 with max_qty 10 and 5 min a unit). Energy is kept always full: the per-mission costs are client
+        data the server does not have, and adding `energy_refill` (qty 99999) to the time pushed it years ahead (issue #1)."""
+        c = self.credits.get("energy") or {}
+        v = int(time.time() // 60) - int(c.get("max_qty", 10)) * int(c.get("unit_restore_time", 5))
+        self.inv(prof)["energy"] = v
+        return v
+
     def grant(self, prof: dict, item: str, qty: int, changes: dict):
+        if item == "energy":
+            changes[item] = self.full_energy(prof)
+            return
         inv = self.inv(prof)
         inv[item] = (inv.get(item) or 0) + qty
         changes[item] = inv[item]
