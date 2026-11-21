@@ -687,10 +687,23 @@ class Conn:
         self.srv.store.save()
 
     def on_shadow(self, p: bytes):
-        """`48`: 16 bytes = FNV-1a(inventory field) + 8 zero bytes + 811c9dc5 (recorded for `xp` after a mission, `vip_points` after the VIP window / a purchase).
-        The client says it has shown this value: `_inventory_shadow.upd_<field>` = the current value (the client compares them; with `upd_vip_points` stuck
-        at 0 the "REACHED VIP LEVEL" window came back at every login). No answer."""
-        inv = self.acc["profile"].setdefault("_inventory", {})
+        """`48`: 16 bytes = FNV-1a(item) + u32 + u32 action + 811c9dc5 (FNV-1a of "").
+        For a weapon (trace_full1, AR05): action 0 = ASSEMBLE -> `45 weapon_assemble {"AR05":1}`, action 1 = upgrade -> `45 weapon_upgrade
+        {"AR05":2}`, then 3. The real server kept `AR05_bp` (4) and the credits as they were: the client counts blueprints itself (issue: ASSEMBLE
+        showed UNLOCKED, but without the answer the weapon stayed locked).
+        For another field (`xp` after a mission, `vip_points` after the VIP window / a purchase) the client says it has shown the value:
+        `_inventory_shadow.upd_<field>` = the current value (with `upd_vip_points` stuck at 0 the "REACHED VIP LEVEL" window came back at
+        every login). No answer, as the real server."""
+        prof = self.acc["profile"]
+        weapon = self.srv.lo.economy.weapon_by_id(p[:4])
+        if weapon:
+            action = int.from_bytes(p[8:12], "big")
+            changes = self.srv.lo.economy.weapon_step(prof, weapon, upgrade=bool(action))
+            reason = "weapon_upgrade" if action else "weapon_assemble"
+            self.log("%s %s (args %s) -> %s" % (reason, weapon, p[4:].hex(), json.dumps(changes)))
+            self.send(P.item_raw(P_fnv(reason), p[:4], changes))
+            return self.srv.store.save()
+        inv = prof.setdefault("_inventory", {})
         name = next((k for k in inv if P_fnv(k) == p[:4] and isinstance(inv[k], (int, float))), None)
         if not name:
             return self.log("shadow %s: unknown field" % p[:4].hex())
