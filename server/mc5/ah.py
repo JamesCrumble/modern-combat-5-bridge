@@ -5,6 +5,7 @@ Behaviour (not replay): the profile of every account lives in the store; a new p
 ratings, display name) are written into the profile, so the next login returns them inside the full profile, as the real server did.
 Unknown client frames are logged in hex and left unanswered.
 """
+
 import asyncio
 import copy
 import hashlib
@@ -15,17 +16,16 @@ import struct
 import time
 
 from . import ahproto as P
-from . import lz4
-from . import iap, social, tokens
+from . import iap, lz4, social, tokens
 from .economy import fnv1a as P_fnv
 from .liveops import LiveOps, fmt
 
 HEARTBEAT = 1.0
-START_TIME_EPOCH_MIN = 12891700   # current_mission.start_time: recorded 16989567 at 23:07Z 2026-10-24 = minutes since the epoch minus this
-RETURNING_WAIT = 0.15   # after `01` the client sends `I` at once if it wants the profile; otherwise the "returning" answer follows
+START_TIME_EPOCH_MIN = 12891700  # current_mission.start_time: recorded 16989567 at 23:07Z 2026-10-24 = minutes since the epoch minus this
+RETURNING_WAIT = 0.15  # after `01` the client sends `I` at once if it wants the profile; otherwise the "returning" answer follows
 
 
-MODES = ("assault", "battleroyale", "recon", "zmbmode", "zombieai")   # opened by the first campaign win (`_inventory.<mode>` = 1)
+MODES = ("assault", "battleroyale", "recon", "zmbmode", "zombieai")  # opened by the first campaign win (`_inventory.<mode>` = 1)
 
 
 def result_objectives(head: str) -> dict:
@@ -52,9 +52,9 @@ def apply_result(acc: dict, p: bytes):
     stats = json.loads(stats_raw)
     prof = acc["profile"]
     cur = prof.get("current_mission")
-    acc.setdefault("ah", {}).setdefault("results", []).append({"t": time.time(), "head": head.decode("latin1"), "stats": stats,
-                                                               "tail": p[i:].hex(), "level": (cur or {}).get("level"),
-                                                               "applied": bool(cur)})
+    acc.setdefault("ah", {}).setdefault("results", []).append(
+        {"t": time.time(), "head": head.decode("latin1"), "stats": stats, "tail": p[i:].hex(), "level": (cur or {}).get("level"), "applied": bool(cur)}
+    )
     if not cur:
         return None
     sp = prof.setdefault("statistics", {}).setdefault("sp", {})
@@ -63,7 +63,7 @@ def apply_result(acc: dict, p: bytes):
             sp[k] = max(sp.get(k, 0), v) if k.startswith("killstreak.") else sp.get(k, 0) + v
     for k in ("kill.explosives", "kill.melees"):
         sp.setdefault(k, 0)
-    gained = sum(v for k, v in stats.items() if k.startswith("xp.") and isinstance(v, (int, float))) + 1   # 893+1, 1337+1, 983+1
+    gained = sum(v for k, v in stats.items() if k.startswith("xp.") and isinstance(v, (int, float))) + 1  # 893+1, 1337+1, 983+1
     inv = prof.setdefault("_inventory", {})
     shadow = prof.setdefault("_inventory_shadow", {})
     inv["xp"] = inv.get("xp", 0) + gained
@@ -78,7 +78,7 @@ def apply_result(acc: dict, p: bytes):
         progress.append(entry)
     entry.update(result_objectives(head.decode("latin1")))
     prof["progress"] = progress
-    prof["highest_unlocked_mission"] = 200 + len(progress)   # recorded 302 (new) -> 201 -> 202; rule from two points, unchecked further
+    prof["highest_unlocked_mission"] = 200 + len(progress)  # recorded 302 (new) -> 201 -> 202; rule from two points, unchecked further
     modes = None
     if stats.get("game.campaign.wins") and not all(inv.get(m) for m in MODES):
         modes = {m: 1 for m in MODES}
@@ -163,18 +163,44 @@ class Conn:
         if self.acc is None:
             self.log("frame %02x before the handshake, ignored" % t)
             return
-        if t == P.C_PING:            # answer to our heartbeat: ms since our previous `1b`
+        if t == P.C_PING:  # answer to our heartbeat: ms since our previous `1b`
             self.pings += 1
             return
         self.record(t, p)
-        name = {P.C_LOGIN: "login", P.C_PROFILE: "profile", P.C_EVENTS: "events", P.C_REST: "rest",
-                P.C_CREDS: "creds", P.C_NAME: "name", P.C_LEAGUES: "leagues", P.C_LEVEL: "level", P.C_RESULT: "result",
-                P.C_MISSION_END: "mission_end", P.C_AGE: "age", P.C_TIME: "time", P.C_FLAGS: "flags",
-                P.C_A8: "ignore", P.C_48: "shadow", P.C_LEVEL_DATA: "level_data", P.C_TIME_SYNC: "time_sync",
-                P.C_CLAN: "clan", P.C_OFFER: "offer", P.C_CREDIT: "credit", P.C_VIEW_PACK: "view_pack",
-                P.C_SETTING: "setting", P.C_CLAIM_TASK: "claim_task", P.C_CLAIM_MILESTONE: "claim_milestone",
-                P.C_BOOSTS: "boosts", P.C_IAP_CLAIM: "iap_claim", P.C_KILLSIGN: "killsign", P.C_PENDING: "pending", P.C_REFRESH: "refresh",
-                P.C_NEXT_LEVEL: "next_level", P.C_LEAVE: "leave", P.C_LEAGUES2: "leagues", }.get(t) or ("ignore" if t in P.C_QUIET else None)
+        name = {
+            P.C_LOGIN: "login",
+            P.C_PROFILE: "profile",
+            P.C_EVENTS: "events",
+            P.C_REST: "rest",
+            P.C_CREDS: "creds",
+            P.C_NAME: "name",
+            P.C_LEAGUES: "leagues",
+            P.C_LEVEL: "level",
+            P.C_RESULT: "result",
+            P.C_MISSION_END: "mission_end",
+            P.C_AGE: "age",
+            P.C_TIME: "time",
+            P.C_FLAGS: "flags",
+            P.C_A8: "ignore",
+            P.C_48: "shadow",
+            P.C_LEVEL_DATA: "level_data",
+            P.C_TIME_SYNC: "time_sync",
+            P.C_CLAN: "clan",
+            P.C_OFFER: "offer",
+            P.C_CREDIT: "credit",
+            P.C_VIEW_PACK: "view_pack",
+            P.C_SETTING: "setting",
+            P.C_CLAIM_TASK: "claim_task",
+            P.C_CLAIM_MILESTONE: "claim_milestone",
+            P.C_BOOSTS: "boosts",
+            P.C_IAP_CLAIM: "iap_claim",
+            P.C_KILLSIGN: "killsign",
+            P.C_PENDING: "pending",
+            P.C_REFRESH: "refresh",
+            P.C_NEXT_LEVEL: "next_level",
+            P.C_LEAVE: "leave",
+            P.C_LEAGUES2: "leagues",
+        }.get(t) or ("ignore" if t in P.C_QUIET else None)
         if name is None:
             self.log("unknown frame %02x len %d: %s" % (t, len(p), p[:120].hex()))
             return
@@ -186,8 +212,19 @@ class Conn:
         spec for the next steps (mission results, progress) and must not be lost."""
         path = os.path.join(os.path.dirname(self.srv.store.path), "ah_frames.jsonl")
         with open(path, "a") as f:
-            f.write(json.dumps({"t": round(time.time(), 3), "conn": self.cid, "fed_id": self.acc["fed_id"] if self.acc else None,
-                                "type": "%02x" % t, "len": len(p), "hex": p.hex()}) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "t": round(time.time(), 3),
+                        "conn": self.cid,
+                        "fed_id": self.acc["fed_id"] if self.acc else None,
+                        "type": "%02x" % t,
+                        "len": len(p),
+                        "hex": p.hex(),
+                    }
+                )
+                + "\n"
+            )
 
     # ------------------------------------------------------------------ handshake
     def on_handshake(self, msg: dict):
@@ -196,9 +233,19 @@ class Conn:
         info = tokens.parse(tok) if tok else None
         room = self.srv.store.room(msg.get("room_id", ""))
         acc = self.srv.store.by_fed_id(info["fed_id"]) if info else None
-        why = ("bad token" if not info else "expired token" if info["expiry"] < time.time() else
-               "unknown room" if not room else "room of another player" if room["fed_id"] != info["fed_id"] else
-               "credential mismatch" if acc is None or acc["credential"] != msg.get("username") else "")
+        why = (
+            "bad token"
+            if not info
+            else "expired token"
+            if info["expiry"] < time.time()
+            else "unknown room"
+            if not room
+            else "room of another player"
+            if room["fed_id"] != info["fed_id"]
+            else "credential mismatch"
+            if acc is None or acc["credential"] != msg.get("username")
+            else ""
+        )
         if why:
             self.log("handshake refused: " + why)
             return self.send_json({"success": False, "action": "connect game", "error": why})
@@ -221,6 +268,7 @@ class Conn:
             prof["client_version"] = (login.get("client_id") or "::").split(":")[2] or prof.get("client_version")
             self.acc["profile"] = prof
             self.state()["new"] = True
+        self.srv.lo.economy.full_energy(prof)
         return prof
 
     def participations(self, events: list) -> list:
@@ -229,8 +277,10 @@ class Conn:
         have = {e["event_id"]: e for e in prof.get("tournaments_sem") or [] if isinstance(e, dict)}
         out = []
         for ev in self.srv.lo.activity_events(events):
-            out.append(have.get(ev["id"]) or {"event_id": ev["id"], "event_rank": -1, "event_score": 0,
-                                              "initial_activities_stats": self.srv.lo.initial_stats(ev, prof)})
+            out.append(
+                have.get(ev["id"])
+                or {"event_id": ev["id"], "event_rank": -1, "event_score": 0, "initial_activities_stats": self.srv.lo.initial_stats(ev, prof)}
+            )
         prof["tournaments_sem"] = out
         return out
 
@@ -255,6 +305,7 @@ class Conn:
         """Login without `I` (client has the profile cached): ratings, league, event ranks, end, pushed event list."""
         prof, now = self.acc["profile"], time.time()
         events = self.srv.lo.events(now)
+        self.send(P.field_raw("energy", {"energy": prof["_inventory"]["energy"]}))  # as the real server at login; the cached value may be stale
         self.send(P.rating(prof.get("rating") or 800, prof.get("rating_duel") or 800))
         self.send_league(final_only=True)
         for part in self.participations(events):
@@ -327,7 +378,7 @@ class Conn:
             self.send(P.field("active_subs", prof["active_subs"]))
         crm = self.srv.lo.crm(events, now, prof)
         digest = hashlib.sha1(P.jcompact(crm)).hexdigest()
-        if st.get("crm_hash") != digest:      # sent again whenever the content changes (expiry every day, server settings)
+        if st.get("crm_hash") != digest:  # sent again whenever the content changes (expiry every day, server settings)
             self.send(P.crm(crm))
             st["crm_hash"] = digest
         offers = prof.get("daily_offers")
@@ -390,17 +441,21 @@ class Conn:
         self.srv.store.save()
 
     def on_level(self, p: bytes):
-        """Level start: the server records current_mission (with the player's boost factors) and the energy timestamp, answers `45 energy` + `10`."""
+        """Level start: the server records current_mission (with the player's boost factors) and the energy time, answers `45 energy` + `10`.
+        The real server charged the mission cost here (Tokyo_01: +10 min) and gave it back on a win; energy is kept full instead (Economy.full_energy)."""
         s, _ = P.read_s16(p, 0)
         info = json.loads(s)
         prof, now = self.acc["profile"], time.time()
         inv = prof.setdefault("_inventory", {})
         boosts = inv.get("boosts") or {}
         factor = lambda k, d: (boosts.get(k) or [{}])[0].get("factor", d)
-        energy = inv.get("energy") or int(now // 60)
-        inv["energy"] = energy
-        prof["current_mission"] = {"boosts": {"dbmsrw": factor("dbmsrw", 0.0), "ws": factor("ws4", 1.0), "xp": factor("xp4", 1.0)},
-                                   "level": info.get("level"), "node": info.get("node"), "start_time": int(now // 60) - START_TIME_EPOCH_MIN}
+        energy = self.srv.lo.economy.full_energy(prof)
+        prof["current_mission"] = {
+            "boosts": {"dbmsrw": factor("dbmsrw", 0.0), "ws": factor("ws4", 1.0), "xp": factor("xp4", 1.0)},
+            "level": info.get("level"),
+            "node": info.get("node"),
+            "start_time": int(now // 60) - START_TIME_EPOCH_MIN,
+        }
         self.send(P.field_raw("energy", {"energy": energy}))
         self.send(P.frame(P.S_LEVEL_OK, b"\0\0\0\0"))
         self.srv.store.save()
@@ -420,7 +475,7 @@ class Conn:
             return self.srv.store.save()
         kind = "sp_first_time" if info["first"] else "sp_replay"
         self.send(P.field_raw("_stats_update", {"_stats_update": {"distance_run": 0}}))  # distance source unknown; 0 keeps the shape
-        step = dict(info["modes"] or {}, **self.zones("result"))   # endmission step: modes on the first win, opened chapters (zones)
+        step = dict(info["modes"] or {}, **self.zones("result"))  # endmission step: modes on the first win, opened chapters (zones)
         if step:
             self.send(P.field_packed("unlocked_modes", step))
         reward = self.srv.lo.economy.mission_reward(prof, kind)
@@ -440,7 +495,7 @@ class Conn:
         if not name:
             self.log("offer %s: unknown id" % fid.hex())
             return self.send(P.refused(fid))
-        if name in eco.rentals:      # TRY IT: instance of a template rental offer (the u32 after the id is 2 here, 0 for plain offers)
+        if name in eco.rentals:  # TRY IT: instance of a template rental offer (the u32 after the id is 2 here, 0 for plain offers)
             status, changes = eco.rent(self.acc["profile"], name)
             self.log("rent %s (arg %s) -> status %d %s" % (name, p[4:8].hex(), status, json.dumps(changes)[:200]))
             if status:
@@ -451,10 +506,10 @@ class Conn:
         self.log("offer %s -> status %d %s" % (name, status, json.dumps(changes)[:200]))
         if status:
             return self.send(P.refused(fid, status))
-        if name.startswith("skip_unlock_zone"):   # bought skip of a chapter's optional conditions: the zone opens now (client handler reads unlocked_zones)
+        if name.startswith("skip_unlock_zone"):  # bought skip of a chapter's optional conditions: the zone opens now (client handler reads unlocked_zones)
             changes.update(self.zones("skip"))
         self.send(P.changes_packed(fid, changes))
-        for credit in opened:        # autoactivate (ultimate_battlepack): opened at once, its own id
+        for credit in opened:  # autoactivate (ultimate_battlepack): opened at once, its own id
             got = eco.use_credit(self.acc["profile"], credit)
             self.send(P.changes_packed(P_fnv(credit), got))
         self.srv.store.save()
@@ -502,15 +557,14 @@ class Conn:
         ev_id, task_id = ev_id.decode("latin1"), task_id.decode("latin1")
         prof = self.acc["profile"]
         ev = next((e for e in self.srv.lo.events() if e["id"] == ev_id), None)
-        tasks = ((ev or {}).get("_template", {}).get("event_tuning", {}).get("_tasks", {}).get("value", []))
-        idx = next((k for k, t in enumerate(tasks)
-                    if any(c.get("id") == task_id for c in t["sub"]["condition"]["value"].values())), None)
+        tasks = (ev or {}).get("_template", {}).get("event_tuning", {}).get("_tasks", {}).get("value", [])
+        idx = next((k for k, t in enumerate(tasks) if any(c.get("id") == task_id for c in t["sub"]["condition"]["value"].values())), None)
         part = next((e for e in prof.get("tournaments_sem") or [] if isinstance(e, dict) and e.get("event_id") == ev_id), None)
         if idx is None or part is None:
             return self.log("claim %s/%s: unknown event or task" % (ev_id, task_id))
         changes = {}
         claimed = part.setdefault("claimed_activities", [])
-        if idx not in claimed:          # a repeated `64` (the client re-sends until answered) gets the same answer, no second award
+        if idx not in claimed:  # a repeated `64` (the client re-sends until answered) gets the same answer, no second award
             claimed.append(idx)
             sub = tasks[idx]["sub"]
             for award in sub["award"]["value"]:
@@ -537,8 +591,14 @@ class Conn:
         ev_id, ms_id = ev_id.decode("latin1"), ms_id.decode("latin1")
         prof = self.acc["profile"]
         ev = next((e for e in self.srv.lo.events() if e["id"] == ev_id), None)
-        ms = next((m["sub"] for m in (ev or {}).get("_template", {}).get("milestones", {}).get("value", [])
-                   if m["sub"]["_milestone_id"]["value"]["text_plain"] == ms_id), None)
+        ms = next(
+            (
+                m["sub"]
+                for m in (ev or {}).get("_template", {}).get("milestones", {}).get("value", [])
+                if m["sub"]["_milestone_id"]["value"]["text_plain"] == ms_id
+            ),
+            None,
+        )
         part = next((e for e in prof.get("tournaments_sem") or [] if isinstance(e, dict) and e.get("event_id") == ev_id), None)
         if ms is None or part is None:
             return self.log("milestone %s/%s: unknown event or milestone" % (ev_id, ms_id))
@@ -556,7 +616,7 @@ class Conn:
                     changes[k] = (prof.get("_inventory") or {}).get(k, 0)
         if ms_id not in claimed:
             claimed.append(ms_id)
-        changes.update({"_sem_event_id": ev_id, "_sem_milestone_id": ms_id, "success": True})   # fields the client handler reads (libMC5 0x5fb6e4..0x5fb780)
+        changes.update({"_sem_event_id": ev_id, "_sem_milestone_id": ms_id, "success": True})  # fields the client handler reads (libMC5 0x5fb6e4..0x5fb780)
         changes["tournaments_sem"] = part
         self.log("milestone %s (%s points) -> %s" % (ms_id, ms["condition"]["value"], json.dumps(changes)[:200]))
         self.send(P.changes_packed(P_fnv("claim_event_milestone"), changes))
