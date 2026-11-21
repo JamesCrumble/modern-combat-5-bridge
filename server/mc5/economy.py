@@ -108,6 +108,22 @@ class Economy:
         inv[item] = (inv.get(item) or 0) + qty
         changes[item] = inv[item]
 
+    def weapon_by_id(self, fid: bytes):
+        """FNV-1a id -> weapon name, or None: a catalog weapon (`weapon`, `weapon_pro`) or anything with a blueprint `<name>_bp`."""
+        name = self.by_id.get(fid)
+        if not name:
+            return None
+        cat = (self.catalog.get(name) or {}).get("category")
+        return name if cat in ("weapon", "weapon_pro") or name + "_bp" in self.catalog else None
+
+    def weapon_step(self, prof: dict, weapon: str, upgrade: bool) -> dict:
+        """ASSEMBLE -> the weapon becomes 1, an upgrade adds 1 (recorded AR05: 1, 2, 3). Blueprints and credits stay as they are: the real
+        server did not take them (AR05_bp 4 before and after), the client compares the blueprint count with its own cost table."""
+        inv = self.inv(prof)
+        cur = inv.get(weapon) or 0
+        inv[weapon] = cur + 1 if upgrade else max(cur, 1)
+        return {weapon: inv[weapon]}
+
     def group(self, ref: str, exclude=()) -> list:
         """`weapon_bp#3` -> droppable weapon blueprints of tier 3; `core#21` -> cores of level 1 (tier digit not mapped yet)."""
         cat, _, tier = ref.partition("#")

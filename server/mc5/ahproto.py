@@ -180,6 +180,13 @@ def changes_packed(fid: bytes, obj) -> bytes:
     return frame(S_FIELD, fid + struct.pack("<f", 1.0) + b"\0" * 8 + lz4.pack_sized(jcompact(obj)))
 
 
+def item_raw(reason: bytes, item: bytes, obj) -> bytes:
+    """'E' keyed by a reason id with the item id in the first u32 after the float (recorded weapon_assemble / weapon_upgrade:
+    `45 0cf1fb56 1.0 4f6e7651 0 {"AR05":1}`)."""
+    body = jline(obj)
+    return frame(S_FIELD_RAW, reason + struct.pack("<f", 1.0) + item + b"\0" * 4 + len(body).to_bytes(4, "big") + body)
+
+
 def refused(fid: bytes, status: int = 4) -> bytes:
     """'E' with a status and no body (recorded refusal: status 4 when the offer cannot be paid)."""
     return frame(S_FIELD_RAW, fid + struct.pack("<f", 1.0) + b"\0\0\0\0" + struct.pack(">I", status))
